@@ -21,7 +21,7 @@ message = f'''Calculating mortgage for ${value}
 print(message)
 
 
-# Internal variables
+
 
 
 # The mortgaged amount (principal)
@@ -38,9 +38,9 @@ n = N * 12
 PMT = PV * (i * (1 + i)**n)
 PMT /= ((1 + i)**n - 1)   # shorthand division operator (/=) as required
 
-# -----------------------------------------------
+
 # Outputs
-# -----------------------------------------------
+
 
 # The total payment for all months (float)
 totalPMT = PMT * n  
