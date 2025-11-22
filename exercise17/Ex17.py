@@ -1,49 +1,71 @@
 import numpy as np
-from scipy.linalg import eig
+import scipy.linalg as la
+
 
 class EigenvalueAnalysis:
     def __init__(self, A: np.ndarray, B: np.ndarray = None):
-        # Step 1: Check if A is a square numpy matrix
-        if not isinstance(A, np.ndarray) or A.shape[0] != A.shape[1]:
-            raise RuntimeError("Matrix A must be square.")
-        
+        # check a is matrix and square
+        if not isinstance(A, np.ndarray):
+            raise RuntimeError("A must be a numpy.ndarray")
+        if A.ndim != 2:
+            raise RuntimeError("A must be a 2D matrix")
+        if A.shape[0] != A.shape[1]:
+            raise RuntimeError("A must be a square matrix")
+
         self.A = A
-        
-        # Step 2: If B is provided, check if B is a square numpy matrix and same size as A
+
+        # check if B is a numpy matrix and is square
         if B is not None:
-            if not isinstance(B, np.ndarray) or B.shape[0] != B.shape[1] or B.shape != A.shape:
-                raise RuntimeError("Matrix B must be square and have the same size as A.")
+            if not isinstance(B, np.ndarray):
+                raise RuntimeError("B must be a numpy.ndarray")
+            if B.ndim != 2:
+                raise RuntimeError("B must be a 2D matrix")
+            if B.shape != A.shape:
+                raise RuntimeError("B must have the same shape as A")
             self.B = B
-            # Perform generalized eigenvalue analysis
-            self.lam, self.x = eig(A, B)
         else:
             self.B = None
-            # Perform standard eigenvalue analysis
-            self.lam, self.x = np.linalg.eig(A)
 
-    def check(self, lam_i, x_i: np.ndarray) -> bool:
-        # Step 3: Ensure lam_i is a valid float
-        if isinstance(lam_i, np.ndarray):
-            lam_i = lam_i.item()  # Convert numpy scalar to native Python float
-        
-        if not isinstance(lam_i, float):
-            raise RuntimeError("Eigenvalue lam_i must be a float.")
-        
-        # Step 4: Ensure x_i is a numpy vector with the same size as A
-        if not isinstance(x_i, np.ndarray) or x_i.ndim != 1 or x_i.shape[0] != self.A.shape[0]:
-            raise RuntimeError("Eigenvector x_i must be a numpy vector with the same size as A.")
-        
-        # Step 5: Compute the residual for standard or generalized eigenvalue problems
+        #Eigenvalue analysis
         if self.B is not None:
-            # Generalized Eigenvalue Problem: A * x_i = lam_i * B * x_i
-            residual = np.dot(self.A, x_i) - lam_i * np.dot(self.B, x_i)
+            lam, x = la.eig(self.A, self.B)      
         else:
-            # Standard Eigenvalue Problem: A * x_i = lam_i * x_i
-            residual = np.dot(self.A, x_i) - lam_i * x_i
-        
-        # Step 6: Compute the norm of the residual
-        norm = np.linalg.norm(residual)
-        
-        # Step 7: Use tolerance to check if the equality is satisfied
+            lam, x = np.linalg.eig(self.A)       
+
+        # Sort lambda 
+        self.lam = np.sort(lam)
+        self.x = x
+
+    def check(self, lam_i: float, x_i: np.ndarray) -> bool:
+        # Type checks 
+        if not np.isscalar(lam_i):
+            raise RuntimeError("lam_i must be a scalar (float)")
+        lam_i = float(lam_i)
+
+        if not isinstance(x_i, np.ndarray):
+            raise RuntimeError("x_i must be a numpy.ndarray")
+
+        # Ensure x_i is a 1D vector
+        if x_i.ndim == 2 and 1 in x_i.shape:
+            x_i = x_i.reshape(-1)
+        elif x_i.ndim != 1:
+            raise RuntimeError("x_i must be a vector (1D array)")
+
+        # Dimension check 
+        if x_i.size != self.A.shape[0]:
+            raise RuntimeError("Dimension mismatch between x_i and A")
+
+        #  Compute residual 
+        if self.B is None:
+            
+            residual = self.A @ x_i - lam_i * x_i
+        else:
+            
+            residual = self.A @ x_i - lam_i * (self.B @ x_i)
+
+        # compute norm and tolerance check 
+        norm = np.linalg.norm(residual, ord=2)
         tol = 1e-10
         return norm < tol
+
+
